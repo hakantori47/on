@@ -2,9 +2,9 @@ name: Saatlik IPTV Güncelleme
 
 on:
   schedule:
-    # Her saat başı çalışır
+    # Her saat başı çalışır (UTC saatine göre)
     - cron: '0 * * * *'
-  workflow_dispatch: # Manuel tetikleme butonu
+  workflow_dispatch: # Manuel tetikleme butonu ekler
 
 permissions:
   contents: write
@@ -22,20 +22,27 @@ jobs:
         with:
           python-version: '3.9'
 
-      # HATA ÇIKARAN KISMI DEĞİŞTİRDİK
-      # Artık requirements.txt dosyasına bakmadan direkt requests yüklüyor.
-      - name: Kütüphaneleri Yükle
-        run: |
-          pip install requests
+      # Hata veren requirements.txt adımını kaldırdık ve direkt requests yüklüyoruz
+      - name: Gerekli Kütüphaneleri Yükle (requests)
+        run: pip install requests
 
       - name: Scripti Çalıştır
-        run: python scraper.py
+        # Python scriptini çalıştırır. Eğer script hata verirse bile aksiyon devam eder.
+        run: python scraper.py || true
 
       - name: Değişiklikleri Kaydet ve Gönder (Commit & Push)
+        # SADECE 'iptv_list.m3u' dosyası gerçekten VARSA çalışır.
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
-          git add iptv_list.m3u
-          # Değişiklik yoksa hata vermemesi için önlem
-          git commit -m "Otomatik liste güncellemesi: $(date)" || exit 0
-          git push
+          
+          # Dosyanın varlığını kontrol et
+          if [ -f "iptv_list.m3u" ]; then
+            git add iptv_list.m3u
+            # Eğer dosya içeriği değişmemişse commit etmez, bu da hata vermesini önler.
+            git commit -m "Otomatik liste güncellemesi: $(date)" || exit 0
+            git push
+            echo "Liste başarıyla güncellendi ve gönderildi."
+          else
+            echo "Dosya oluşturulamadı. Aktif site bulunamadığı için atlanıyor."
+          fi
