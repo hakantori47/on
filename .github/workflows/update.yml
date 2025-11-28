@@ -1,18 +1,19 @@
-name: Update M3U
+name: Günlük M3U Güncellemesi
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # Her 10 dakikada bir çalışır
-  workflow_dispatch:          # Manuel çalıştırma için
+    - cron: "*/10 * * * *"  # Her 10 dakikada bir çalışır
+  workflow_dispatch:        # Manuel tetikleme için
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Repo'yu çek
+      - name: Reponun içeriğini çek
         uses: actions/checkout@v3
 
-      - name: Python kur
+      - name: Python ortamını kur
         uses: actions/setup-python@v4
         with:
           python-version: "3.x"
@@ -20,13 +21,23 @@ jobs:
       - name: Gerekli paketleri yükle
         run: pip install requests
 
-      - name: Scripti çalıştır
+      - name: Python scriptini çalıştır
         run: python ontvizle.py
 
-      - name: M3U dosyasını push et
+      - name: Dosya var mı kontrol et
+        run: |
+          ls -l
+          if [ -f "DeaTHLesS-sports.m3u" ]; then
+            echo "Dosya bulundu, push edilecek."
+          else
+            echo "Dosya bulunamadı, işlem iptal."
+            exit 0
+          fi
+
+      - name: M3U dosyasını repoya ekle ve push et
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add DeaTHLesS-sports.m3u
-          git commit -m "Otomatik M3U güncellemesi"
-          git push
+          git add DeaTHLesS-sports.m3u || echo "Dosya zaten eklenmiş."
+          git commit -m "Otomatik M3U güncellemesi" || echo "Commit yapılmadı."
+          git push || echo "Push başarısız."
